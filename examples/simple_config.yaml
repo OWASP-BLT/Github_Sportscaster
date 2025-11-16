@@ -1,0 +1,16 @@
+# Simple GitHub Sportscaster Configuration
+
+# Environment variables can be used with ${VAR_NAME}
+github_token: ${GITHUB_TOKEN}
+
+channels:
+  - name: "Getting Started"
+    description: "Simple example monitoring a few repos"
+    repositories:
+      - "octocat/Hello-World"
+      - "github/gitignore"
+    event_types:
+      - star
+      - fork
+      - pull_request
+    commentary_style: "enthusiastic"

@@ -1,0 +1,85 @@
+# Example GitHub Sportscaster Configuration
+
+# GitHub API Token (required)
+github_token: ${GITHUB_TOKEN}
+
+# OpenAI API Key (optional, for enhanced AI commentary)
+openai_api_key: ${OPENAI_API_KEY}
+
+# Polling configuration
+poll_interval: 60  # seconds between API polls
+max_events_per_cycle: 50
+
+# Server configuration
+flask_host: 0.0.0.0
+flask_port: 5000
+
+# Channels to monitor
+channels:
+  # Example: Monitor a specific organization
+  - name: "OWASP Channel"
+    description: "Monitoring OWASP projects"
+    organizations:
+      - "OWASP"
+    repositories: []
+    tags: []
+    curated_lists: []
+    event_types:
+      - star
+      - fork
+      - pull_request
+      - commit
+      - issue
+      - release
+    leaderboard_metrics:
+      - stars
+      - forks
+      - pull_requests
+      - commits
+    commentary_style: "enthusiastic"
+    show_avatars: true
+    show_logos: true
+
+  # Example: Monitor specific repositories
+  - name: "Python Projects"
+    description: "Popular Python projects"
+    organizations: []
+    repositories:
+      - "pallets/flask"
+      - "django/django"
+      - "psf/requests"
+    tags:
+      - "python"
+    curated_lists: []
+    event_types:
+      - star
+      - fork
+      - pull_request
+      - commit
+    leaderboard_metrics:
+      - stars
+      - forks
+      - pull_requests
+    commentary_style: "professional"
+    show_avatars: true
+    show_logos: true
+
+  # Example: Monitor by topic
+  - name: "Machine Learning"
+    description: "ML and AI repositories"
+    organizations: []
+    repositories: []
+    tags:
+      - "machine-learning"
+      - "artificial-intelligence"
+    curated_lists: []
+    event_types:
+      - star
+      - fork
+      - release
+    leaderboard_metrics:
+      - stars
+      - forks
+    commentary_style: "dramatic"
+    show_avatars: true
+    show_logos: true

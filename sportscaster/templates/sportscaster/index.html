@@ -1,0 +1,100 @@
+{% extends "sportscaster/base.html" %}
+
+{% block title %}GitHub Sportscaster - Channels{% endblock %}
+
+{% block extra_styles %}
+.channels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.channel-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 25px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.channel-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.channel-card h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+
+.channel-card p {
+    opacity: 0.8;
+    line-height: 1.6;
+}
+
+.channel-scope {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.no-channels {
+    text-align: center;
+    padding: 60px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    margin-top: 30px;
+}
+
+.no-channels h2 {
+    margin-bottom: 20px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 30px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 25px;
+    color: #fff;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+{% endblock %}
+
+{% block content %}
+<div class="channels-section">
+    <h2>Available Channels</h2>
+    
+    {% if channels %}
+    <div class="channels-grid">
+        {% for channel in channels %}
+        <div class="channel-card" onclick="location.href='/channel/{{ channel.id }}/'">
+            <h3>{{ channel.name }}</h3>
+            <p>{{ channel.description|default:"Live GitHub activity monitoring" }}</p>
+            <span class="channel-scope">{{ channel.get_scope_display }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-channels">
+        <h2>No Active Channels</h2>
+        <p>Create a channel in the admin panel to start monitoring GitHub activity.</p>
+        <a href="/admin/" class="btn">Go to Admin Panel</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

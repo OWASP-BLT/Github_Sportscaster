@@ -1,0 +1,381 @@
+{% extends "sportscaster/base.html" %}
+
+{% block title %}{{ channel.name }} - GitHub Sportscaster{% endblock %}
+
+{% block extra_styles %}
+.channel-header {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.sportscaster-video {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 15px;
+    padding: 20px;
+    min-height: 400px;
+}
+
+.video-screen {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.sportscaster-bot {
+    font-size: 4em;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.commentary-box {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+    min-height: 100px;
+}
+
+.commentary-text {
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.6;
+}
+
+.leaderboard {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+}
+
+.leaderboard h3 {
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.leaderboard-item {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.leaderboard-item:hover {
+    background: rgba(0, 0, 0, 0.3);
+    transform: translateX(5px);
+}
+
+.rank {
+    font-size: 1.5em;
+    font-weight: bold;
+    width: 40px;
+}
+
+.repo-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.stats {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9em;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.events-feed {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.events-feed h3 {
+    margin-bottom: 20px;
+}
+
+.event-item {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid rgba(255, 255, 255, 0.3);
+    animation: slideIn 0.5s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.event-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.event-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.event-type {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+
+.event-commentary {
+    font-style: italic;
+    opacity: 0.9;
+    margin-top: 5px;
+}
+
+.connection-status {
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.connected {
+    background: rgba(76, 175, 80, 0.3);
+}
+
+.disconnected {
+    background: rgba(244, 67, 54, 0.3);
+}
+
+@media (max-width: 968px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<div class="channel-header">
+    <h2>{{ channel.name }}</h2>
+    <p>{{ channel.description|default:"Live monitoring of GitHub activity" }}</p>
+</div>
+
+<div class="connection-status disconnected" id="connectionStatus">
+    🔴 Connecting to live stream...
+</div>
+
+<div class="main-content">
+    <div class="sportscaster-video">
+        <div class="video-screen">
+            <div class="sportscaster-bot">🎙️</div>
+            <h3>AI Sportscaster Live</h3>
+            <p>Monitoring GitHub activity in real-time...</p>
+        </div>
+        <div class="commentary-box">
+            <div class="commentary-text" id="commentary">
+                Welcome to the GitHub Sportscaster! We're tracking live GitHub events...
+            </div>
+        </div>
+    </div>
+    
+    <div class="leaderboard">
+        <h3>🏆 Leaderboard</h3>
+        <div id="leaderboardContainer">
+            <p style="text-align: center; opacity: 0.7;">Loading leaderboard...</p>
+        </div>
+    </div>
+</div>
+
+<div class="events-feed">
+    <h3>📊 Recent Events</h3>
+    <div id="eventsContainer">
+        <p style="text-align: center; opacity: 0.7;">Waiting for events...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const channelId = {{ channel.id }};
+    let ws = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    
+    function connect() {
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const wsPath = `${wsScheme}://${window.location.host}/ws/sportscaster/${channelId}/`;
+        
+        ws = new WebSocket(wsPath);
+        
+        ws.onopen = function(e) {
+            console.log('WebSocket connected');
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+            loadInitialData();
+        };
+        
+        ws.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            handleMessage(data);
+        };
+        
+        ws.onclose = function(e) {
+            console.log('WebSocket closed');
+            updateConnectionStatus(false);
+            
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connect, 3000 * reconnectAttempts);
+            }
+        };
+        
+        ws.onerror = function(e) {
+            console.error('WebSocket error:', e);
+        };
+    }
+    
+    function updateConnectionStatus(connected) {
+        const status = document.getElementById('connectionStatus');
+        if (connected) {
+            status.className = 'connection-status connected';
+            status.innerHTML = '🟢 Live - Connected to stream';
+        } else {
+            status.className = 'connection-status disconnected';
+            status.innerHTML = '🔴 Disconnected - Attempting to reconnect...';
+        }
+    }
+    
+    function handleMessage(data) {
+        if (data.type === 'event') {
+            addEvent(data);
+            updateCommentary(data.commentary);
+        } else if (data.type === 'leaderboard') {
+            updateLeaderboard(data.leaderboard);
+        } else if (data.type === 'commentary') {
+            updateCommentary(data.text);
+        }
+    }
+    
+    function addEvent(event) {
+        const container = document.getElementById('eventsContainer');
+        
+        if (container.querySelector('p')) {
+            container.innerHTML = '';
+        }
+        
+        const eventHtml = `
+            <div class="event-item">
+                <div class="event-header">
+                    ${event.actor_avatar ? `<img src="${event.actor_avatar}" class="event-avatar" alt="${event.actor}">` : ''}
+                    <strong>${event.actor || 'Someone'}</strong>
+                    <span class="event-type">${event.event_type}</span>
+                    <span style="flex: 1; text-align: right; opacity: 0.7; font-size: 0.9em;">${new Date(event.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <div>${event.repository}</div>
+                ${event.commentary ? `<div class="event-commentary">"${event.commentary}"</div>` : ''}
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('afterbegin', eventHtml);
+        
+        const events = container.querySelectorAll('.event-item');
+        if (events.length > 20) {
+            events[events.length - 1].remove();
+        }
+    }
+    
+    function updateCommentary(text) {
+        const commentary = document.getElementById('commentary');
+        commentary.textContent = text;
+        commentary.style.animation = 'none';
+        setTimeout(() => {
+            commentary.style.animation = 'slideIn 0.5s ease';
+        }, 10);
+    }
+    
+    function updateLeaderboard(entries) {
+        const container = document.getElementById('leaderboardContainer');
+        
+        if (!entries || entries.length === 0) {
+            container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No data yet</p>';
+            return;
+        }
+        
+        container.innerHTML = entries.map(entry => `
+            <div class="leaderboard-item">
+                <span class="rank">#${entry.rank}</span>
+                <span class="repo-name">${entry.repository}</span>
+                <div class="stats">
+                    <span class="stat">⭐ ${entry.stars}</span>
+                    <span class="stat">🔱 ${entry.forks}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function loadInitialData() {
+        fetch(`/api/channel/${channelId}/events/?limit=10`)
+            .then(response => response.json())
+            .then(events => {
+                events.forEach(event => addEvent(event));
+            })
+            .catch(error => console.error('Error loading events:', error));
+        
+        fetch(`/api/channel/${channelId}/leaderboard/?limit=10`)
+            .then(response => response.json())
+            .then(leaderboard => {
+                updateLeaderboard(leaderboard);
+            })
+            .catch(error => console.error('Error loading leaderboard:', error));
+    }
+    
+    connect();
+    
+    setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'ping',
+                timestamp: Date.now()
+            }));
+        }
+    }, 30000);
+</script>
+{% endblock %}

@@ -369,6 +369,12 @@
                     });
             }
 
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
             formatEventType(type) {
                 return type.replace('Event', '').replace(/([A-Z])/g, ' $1').trim();
             }
@@ -428,14 +434,14 @@
                     card.innerHTML = `
                         <div class="rank">#${rank}</div>
                         <div class="repo-name">
-                            <a href="${repo.url}" target="_blank">${repo.name}</a>
+                            <a href="${this.escapeHtml(repo.url)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(repo.name)}</a>
                         </div>
                         <div class="activity-count">${repo.count} events</div>
                         <div class="last-activity">
-                            ${this.formatTime(repo.lastActivity)}
+                            ${this.escapeHtml(this.formatTime(repo.lastActivity))}
                         </div>
                         <div class="event-type">
-                            ${this.formatEventType(repo.lastEventType)}
+                            ${this.escapeHtml(this.formatEventType(repo.lastEventType))}
                         </div>
                     `;
 

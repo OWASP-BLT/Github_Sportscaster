@@ -1,0 +1,26 @@
+# Core dependencies
+requests>=2.31.0
+PyGithub>=2.1.1
+python-dotenv>=1.0.0
+
+# AI/ML for commentary generation
+openai>=1.3.0
+
+# Video/Animation
+pillow>=10.1.0
+moviepy>=1.0.3
+
+# Data handling
+pydantic>=2.5.0
+PyYAML>=6.0.1
+
+# Web framework for streaming
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Async support
+aiohttp>=3.9.0
+asyncio>=3.4.3
+
+# Logging and monitoring
+python-json-logger>=2.0.7

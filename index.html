@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Activity Sportscaster</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .repo-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .repo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .rank {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .repo-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            word-break: break-all;
+            padding-right: 50px;
+        }
+
+        .repo-name a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .repo-name a:hover {
+            text-decoration: underline;
+        }
+
+        .activity-count {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffd700;
+            margin: 10px 0;
+        }
+
+        .last-activity {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .event-type {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin: 5px 5px 0 0;
+        }
+
+        /* Blink animation for new activity */
+        @keyframes blink {
+            0%, 100% { 
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.2);
+            }
+            50% { 
+                background: rgba(255, 215, 0, 0.4);
+                border-color: rgba(255, 215, 0, 0.8);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            }
+        }
+
+        .blink {
+            animation: blink 0.6s ease-in-out 2;
+        }
+
+        /* Celebration animation for rank improvement */
+        @keyframes celebrate {
+            0%, 100% { 
+                transform: translateY(0) scale(1);
+            }
+            25% { 
+                transform: translateY(-10px) scale(1.05);
+            }
+            75% { 
+                transform: translateY(-5px) scale(1.02);
+            }
+        }
+
+        @keyframes confetti {
+            0% { 
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% { 
+                transform: translateY(-100px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .celebrate {
+            animation: celebrate 0.6s ease-in-out;
+            border-color: rgba(255, 215, 0, 0.8);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .trophy {
+            font-size: 2em;
+            position: absolute;
+            animation: confetti 1s ease-out forwards;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.5em;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #ff6b6b;
+        }
+
+        /* Pulse animation for loading */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .refresh-info {
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ GitHub Activity Sportscaster</h1>
+        <p>Real-time leaderboard of GitHub repository activity</p>
+    </div>
+
+    <div class="stats">
+        <span id="repo-count">0</span> repositories tracked | 
+        <span id="event-count">0</span> events processed | 
+        Last update: <span id="last-update">-</span>
+    </div>
+
+    <div class="loading pulse" id="loading">Loading GitHub activity...</div>
+    <div class="error" id="error" style="display: none;"></div>
+    
+    <div class="grid-container" id="grid"></div>
+
+    <div class="refresh-info">
+        Auto-refreshing every 30 seconds
+    </div>
+
+    <script>
+        class GitHubSportscaster {
+            constructor() {
+                this.repos = new Map();
+                this.previousRanks = new Map();
+                this.totalEvents = 0;
+                this.updateInterval = 30000; // 30 seconds
+                this.demoMode = false;
+                this.failedAttempts = 0;
+                this.init();
+            }
+
+            async init() {
+                await this.fetchActivity();
+                setInterval(() => this.fetchActivity(), this.updateInterval);
+            }
+
+            generateMockEvent(repoName, eventType) {
+                return {
+                    repo: {
+                        id: Math.floor(Math.random() * 1000000) + Date.now(),
+                        name: repoName
+                    },
+                    type: eventType,
+                    created_at: new Date().toISOString()
+                };
+            }
+
+            getMockEvents() {
+                const repos = [
+                    'facebook/react', 'microsoft/vscode', 'vercel/next.js', 
+                    'nodejs/node', 'tensorflow/tensorflow', 'kubernetes/kubernetes',
+                    'rust-lang/rust', 'golang/go', 'python/cpython', 
+                    'microsoft/TypeScript', 'angular/angular', 'vuejs/vue',
+                    'torvalds/linux', 'electron/electron', 'webpack/webpack'
+                ];
+                const eventTypes = [
+                    'PushEvent', 'PullRequestEvent', 'IssuesEvent', 
+                    'WatchEvent', 'ForkEvent', 'CreateEvent'
+                ];
+                
+                const events = [];
+                // Generate random events for demo
+                for (let i = 0; i < 30; i++) {
+                    const randomRepo = repos[Math.floor(Math.random() * repos.length)];
+                    const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                    events.push(this.generateMockEvent(randomRepo, randomType));
+                }
+                return events;
+            }
+
+            async fetchActivity() {
+                try {
+                    let events;
+                    
+                    if (this.demoMode) {
+                        // In demo mode, generate mock events
+                        events = this.getMockEvents();
+                    } else {
+                        // Try to fetch from GitHub API
+                        const response = await fetch('https://api.github.com/events');
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        events = await response.json();
+                        this.failedAttempts = 0;
+                    }
+
+                    this.processEvents(events);
+                    this.render();
+                    
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('error').style.display = 'none';
+                    
+                } catch (error) {
+                    console.error('Error fetching GitHub events:', error);
+                    this.failedAttempts++;
+                    
+                    // After 2 failed attempts, switch to demo mode
+                    if (this.failedAttempts >= 2 && !this.demoMode) {
+                        this.demoMode = true;
+                        console.log('Switching to demo mode with mock data');
+                        const errorDiv = document.getElementById('error');
+                        errorDiv.textContent = 'Running in demo mode with simulated data';
+                        errorDiv.style.display = 'block';
+                        setTimeout(() => {
+                            errorDiv.style.display = 'none';
+                        }, 3000);
+                        // Immediately fetch mock data
+                        return this.fetchActivity();
+                    }
+                    
+                    const errorDiv = document.getElementById('error');
+                    errorDiv.textContent = `Error loading data: ${error.message}. Retrying...`;
+                    errorDiv.style.display = 'block';
+                }
+            }
+
+            processEvents(events) {
+                const newActivity = new Set();
+
+                events.forEach(event => {
+                    const repoName = event.repo.name;
+                    const repoId = event.repo.id;
+                    
+                    if (!this.repos.has(repoId)) {
+                        this.repos.set(repoId, {
+                            id: repoId,
+                            name: repoName,
+                            count: 0,
+                            lastActivity: new Date(event.created_at),
+                            lastEventType: event.type,
+                            url: `https://github.com/${repoName}`
+                        });
+                    }
+
+                    const repo = this.repos.get(repoId);
+                    repo.count++;
+                    repo.lastActivity = new Date(event.created_at);
+                    repo.lastEventType = event.type;
+                    newActivity.add(repoId);
+                    this.totalEvents++;
+                });
+
+                // Store new activity for animation
+                this.newActivity = newActivity;
+
+                // Update stats
+                document.getElementById('repo-count').textContent = this.repos.size;
+                document.getElementById('event-count').textContent = this.totalEvents;
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            }
+
+            getSortedRepos() {
+                return Array.from(this.repos.values())
+                    .sort((a, b) => {
+                        if (b.count !== a.count) {
+                            return b.count - a.count;
+                        }
+                        return b.lastActivity - a.lastActivity;
+                    });
+            }
+
+            formatEventType(type) {
+                return type.replace('Event', '').replace(/([A-Z])/g, ' $1').trim();
+            }
+
+            formatTime(date) {
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000);
+                
+                if (diff < 60) return `${diff}s ago`;
+                if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                return `${Math.floor(diff / 86400)}d ago`;
+            }
+
+            createTrophy() {
+                const trophy = document.createElement('div');
+                trophy.className = 'trophy';
+                trophy.textContent = '🎉';
+                trophy.style.left = Math.random() * 100 + '%';
+                trophy.style.top = '50%';
+                return trophy;
+            }
+
+            render() {
+                const grid = document.getElementById('grid');
+                const sortedRepos = this.getSortedRepos();
+                
+                // Clear existing content
+                grid.innerHTML = '';
+
+                sortedRepos.forEach((repo, index) => {
+                    const rank = index + 1;
+                    const previousRank = this.previousRanks.get(repo.id);
+                    const hasNewActivity = this.newActivity && this.newActivity.has(repo.id);
+                    const rankImproved = previousRank && previousRank > rank;
+
+                    const card = document.createElement('div');
+                    card.className = 'repo-card';
+                    card.id = `repo-${repo.id}`;
+
+                    if (hasNewActivity) {
+                        card.classList.add('blink');
+                    }
+
+                    if (rankImproved) {
+                        card.classList.add('celebrate');
+                        // Add confetti effect
+                        for (let i = 0; i < 5; i++) {
+                            setTimeout(() => {
+                                const trophy = this.createTrophy();
+                                card.appendChild(trophy);
+                                setTimeout(() => trophy.remove(), 1000);
+                            }, i * 100);
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <div class="rank">#${rank}</div>
+                        <div class="repo-name">
+                            <a href="${repo.url}" target="_blank">${repo.name}</a>
+                        </div>
+                        <div class="activity-count">${repo.count} events</div>
+                        <div class="last-activity">
+                            ${this.formatTime(repo.lastActivity)}
+                        </div>
+                        <div class="event-type">
+                            ${this.formatEventType(repo.lastEventType)}
+                        </div>
+                    `;
+
+                    grid.appendChild(card);
+
+                    // Update previous ranks
+                    this.previousRanks.set(repo.id, rank);
+                });
+
+                // Clear new activity markers after render
+                this.newActivity = new Set();
+            }
+        }
+
+        // Initialize the sportscaster when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            new GitHubSportscaster();
+        });
+    </script>
+</body>
+</html>

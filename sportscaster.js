@@ -183,7 +183,7 @@ class AICommentary {
     
     constructor() {
         this.enabled = false;
-        this.apiUrl = localStorage.getItem('ai_api_url') || '';
+        this.apiUrl = localStorage.getItem('ai_api_url') || 'https://api.openai.com/v1/chat/completions';
         this.apiKey = localStorage.getItem('ai_api_key') || '';
         this.model = localStorage.getItem('ai_model') || 'gpt-4o-mini';
         this.lastCommentary = '';

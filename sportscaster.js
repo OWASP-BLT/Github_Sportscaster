@@ -128,6 +128,10 @@ class SoundEffects {
 class TextToSpeech {
     // Delay in ms after cancel before speaking (Chrome bug workaround)
     static SPEAK_DELAY_MS = 50;
+    // Maximum retries for loading voices on iOS
+    static MAX_VOICE_RETRIES = 50;
+    // Delay between voice loading retries in ms
+    static VOICE_RETRY_DELAY_MS = 100;
 
     constructor() {
         this.enabled = false;
@@ -136,7 +140,21 @@ class TextToSpeech {
         this.rate = 1.1;
         this.pitch = 1.0;
         this.voicesLoaded = false;
+        this.isUnlocked = false;
+        this.pendingText = null;
+        this.isIOS = this.detectIOS();
         this.initVoice();
+    }
+
+    /**
+     * Detects if the current device is running iOS (Safari, DuckDuckGo, etc.)
+     * @returns {boolean} True if running on iOS
+     */
+    detectIOS() {
+        const userAgent = navigator.userAgent || navigator.vendor || '';
+        // Check for iOS devices including iPad on iOS 13+
+        return /iPad|iPhone|iPod/.test(userAgent) || 
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
 
     initVoice() {
@@ -152,6 +170,13 @@ class TextToSpeech {
                              voices.find(v => v.lang.startsWith('en')) ||
                              voices[0];
                 this.voicesLoaded = true;
+                
+                // If we have pending text and TTS is enabled and unlocked, speak it now
+                if (this.pendingText && this.enabled && this.isUnlocked) {
+                    const text = this.pendingText;
+                    this.pendingText = null;
+                    this.speakInternal(text);
+                }
             }
         };
         
@@ -159,14 +184,83 @@ class TextToSpeech {
         if (this.synth.onvoiceschanged !== undefined) {
             this.synth.onvoiceschanged = loadVoices;
         }
+        
+        // iOS/WebKit workaround: voices might not load immediately
+        // Poll for voices if not loaded yet
+        if (!this.voicesLoaded && this.isIOS) {
+            this.pollForVoices(loadVoices);
+        }
     }
 
+    /**
+     * Polls for voices until they become available (iOS workaround)
+     * @param {Function} loadVoices - Callback to load voices
+     * @param {number} retries - Current retry count
+     */
+    pollForVoices(loadVoices, retries = 0) {
+        if (this.voicesLoaded || retries >= TextToSpeech.MAX_VOICE_RETRIES) {
+            return;
+        }
+        setTimeout(() => {
+            loadVoices();
+            if (!this.voicesLoaded) {
+                this.pollForVoices(loadVoices, retries + 1);
+            }
+        }, TextToSpeech.VOICE_RETRY_DELAY_MS);
+    }
+
+    /**
+     * Toggles TTS on/off and unlocks speech synthesis on iOS
+     * Must be called from a user gesture (click/tap) for iOS compatibility
+     * @returns {boolean} New enabled state
+     */
     toggle() {
         this.enabled = !this.enabled;
-        if (!this.enabled && this.synth) {
+        
+        if (this.enabled && this.synth) {
+            // iOS/WebKit workaround: "unlock" speech synthesis on first user interaction
+            // Speaking an empty utterance initializes the audio context
+            if (!this.isUnlocked) {
+                this.unlockSynthesis();
+            }
+        } else if (!this.enabled && this.synth) {
             this.synth.cancel();
+            this.pendingText = null;
         }
         return this.enabled;
+    }
+
+    /**
+     * Unlocks speech synthesis by speaking a silent utterance
+     * Required on iOS to enable TTS from user gesture
+     */
+    unlockSynthesis() {
+        if (!this.synth || this.isUnlocked) return;
+        
+        try {
+            // Cancel any pending speech
+            this.synth.cancel();
+            
+            // Create a silent utterance to unlock the audio context
+            const silentUtterance = new SpeechSynthesisUtterance('');
+            silentUtterance.volume = 0;
+            silentUtterance.rate = 1;
+            
+            silentUtterance.onend = () => {
+                this.isUnlocked = true;
+            };
+            
+            silentUtterance.onerror = () => {
+                // Even on error, consider it unlocked - we tried from user gesture
+                this.isUnlocked = true;
+            };
+            
+            this.synth.speak(silentUtterance);
+            this.isUnlocked = true; // Optimistically set to unlocked
+        } catch (e) {
+            console.warn('Failed to unlock speech synthesis:', e);
+            this.isUnlocked = true; // Don't block further attempts
+        }
     }
 
     /**
@@ -179,8 +273,12 @@ class TextToSpeech {
         }
     }
 
-    speak(text) {
-        if (!this.enabled || !this.synth || !text) return;
+    /**
+     * Internal method to actually speak the text
+     * @param {string} text - Text to speak
+     */
+    speakInternal(text) {
+        if (!this.synth || !text) return;
         
         // Cancel any pending speech
         this.synth.cancel();
@@ -198,6 +296,18 @@ class TextToSpeech {
                 this.synth.speak(utterance);
             }
         }, TextToSpeech.SPEAK_DELAY_MS);
+    }
+
+    speak(text) {
+        if (!this.enabled || !this.synth || !text) return;
+        
+        // On iOS, if voices aren't loaded yet, queue the text for later
+        if (!this.voicesLoaded && this.isIOS) {
+            this.pendingText = text;
+            return;
+        }
+        
+        this.speakInternal(text);
     }
 }
 

@@ -126,6 +126,9 @@ class SoundEffects {
 
 // Text-to-Speech Manager
 class TextToSpeech {
+    // Delay in ms after cancel before speaking (Chrome bug workaround)
+    static SPEAK_DELAY_MS = 50;
+
     constructor() {
         this.enabled = false;
         this.synth = window.speechSynthesis;
@@ -179,9 +182,6 @@ class TextToSpeech {
     speak(text) {
         if (!this.enabled || !this.synth || !text) return;
         
-        // Resume synthesis if paused (fixes Chrome bug)
-        this.resumeSynthesis();
-        
         // Cancel any pending speech
         this.synth.cancel();
         
@@ -197,7 +197,7 @@ class TextToSpeech {
                 this.resumeSynthesis();
                 this.synth.speak(utterance);
             }
-        }, 50);
+        }, TextToSpeech.SPEAK_DELAY_MS);
     }
 }
 

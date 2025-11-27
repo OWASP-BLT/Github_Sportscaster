@@ -342,6 +342,106 @@
             font-size: 0.9em;
         }
 
+        /* Rate Limit & Refresh Progress Styles */
+        .api-status {
+            max-width: 900px;
+            margin: 0 auto 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .api-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .rate-limit-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .rate-limit-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+        }
+
+        .rate-limit-label {
+            opacity: 0.7;
+        }
+
+        .rate-limit-value {
+            font-weight: bold;
+            color: #48bb78;
+        }
+
+        .rate-limit-value.warning {
+            color: #ecc94b;
+        }
+
+        .rate-limit-value.danger {
+            color: #fc8181;
+        }
+
+        .refresh-countdown {
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .countdown-value {
+            font-weight: bold;
+            min-width: 25px;
+            text-align: right;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar.loading {
+            background: linear-gradient(90deg, #ecc94b, #d69e2e);
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        /* Staggered event animation */
+        @keyframes staggerSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        .event-item.stagger-in {
+            animation: staggerSlideIn 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 600px) {
             .sportscaster-section {
@@ -429,14 +529,36 @@
         </div>
     </div>
 
+    <!-- API Status & Refresh Progress -->
+    <div class="api-status" id="api-status">
+        <div class="api-status-header">
+            <div class="rate-limit-info">
+                <div class="rate-limit-item">
+                    <span class="rate-limit-label">API Requests:</span>
+                    <span class="rate-limit-value" id="rate-remaining">-</span>
+                    <span class="rate-limit-label">/ </span>
+                    <span class="rate-limit-value" id="rate-limit">-</span>
+                </div>
+                <div class="rate-limit-item">
+                    <span class="rate-limit-label">Resets in:</span>
+                    <span class="rate-limit-value" id="rate-reset">-</span>
+                </div>
+            </div>
+            <div class="refresh-countdown">
+                <span>Next refresh:</span>
+                <span class="countdown-value" id="countdown">-</span>
+                <span>s</span>
+            </div>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar" style="width: 100%;"></div>
+        </div>
+    </div>
+
     <div class="loading pulse" id="loading">Loading GitHub activity...</div>
     <div class="error" id="error" style="display: none;"></div>
     
     <div class="list-container" id="event-list"></div>
-
-    <div class="refresh-info">
-        Auto-refreshing every 30 seconds
-    </div>
 
     <script>
         class GitHubSportscaster {
@@ -444,17 +566,82 @@
                 this.events = [];
                 this.maxEvents = 50; // Keep last 50 events
                 this.totalEvents = 0;
-                this.updateInterval = 30000; // 30 seconds
+                this.updateInterval = 10000; // 10 seconds - optimal for fast updates
                 this.demoMode = false;
                 this.failedAttempts = 0;
                 this.seenEventIds = new Set();
                 this.latestEvent = null;
+                this.etag = null; // For conditional requests
+                this.lastModified = null;
+                this.rateLimit = { remaining: null, limit: null, reset: null };
+                this.countdownInterval = null;
+                this.secondsUntilRefresh = 0;
                 this.init();
             }
 
             async init() {
+                this.startCountdown();
                 await this.fetchActivity();
                 setInterval(() => this.fetchActivity(), this.updateInterval);
+            }
+
+            startCountdown() {
+                this.secondsUntilRefresh = this.updateInterval / 1000;
+                this.updateCountdownDisplay();
+                
+                if (this.countdownInterval) {
+                    clearInterval(this.countdownInterval);
+                }
+                
+                this.countdownInterval = setInterval(() => {
+                    this.secondsUntilRefresh--;
+                    if (this.secondsUntilRefresh < 0) {
+                        this.secondsUntilRefresh = 0;
+                    }
+                    this.updateCountdownDisplay();
+                }, 1000);
+            }
+
+            updateCountdownDisplay() {
+                const countdownEl = document.getElementById('countdown');
+                const progressBar = document.getElementById('progress-bar');
+                
+                if (countdownEl) {
+                    countdownEl.textContent = this.secondsUntilRefresh;
+                }
+                
+                if (progressBar) {
+                    const progress = (this.secondsUntilRefresh / (this.updateInterval / 1000)) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.classList.remove('loading');
+                }
+            }
+
+            updateRateLimitDisplay() {
+                const remainingEl = document.getElementById('rate-remaining');
+                const limitEl = document.getElementById('rate-limit');
+                const resetEl = document.getElementById('rate-reset');
+                
+                if (this.rateLimit.remaining !== null) {
+                    remainingEl.textContent = this.rateLimit.remaining;
+                    limitEl.textContent = this.rateLimit.limit;
+                    
+                    // Add warning colors based on remaining requests
+                    remainingEl.classList.remove('warning', 'danger');
+                    if (this.rateLimit.remaining <= 10) {
+                        remainingEl.classList.add('danger');
+                    } else if (this.rateLimit.remaining <= 30) {
+                        remainingEl.classList.add('warning');
+                    }
+                }
+                
+                if (this.rateLimit.reset !== null) {
+                    const now = Math.floor(Date.now() / 1000);
+                    const secondsUntilReset = Math.max(0, this.rateLimit.reset - now);
+                    const minutes = Math.floor(secondsUntilReset / 60);
+                    const seconds = secondsUntilReset % 60;
+                    resetEl.textContent = `${minutes}m ${seconds}s`;
+                }
             }
 
             generateMockEvent(repoName, eventType) {
@@ -491,10 +678,24 @@
                     const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
                     events.push(this.generateMockEvent(randomRepo, randomType));
                 }
+                
+                // Simulate rate limit for demo mode
+                this.rateLimit = {
+                    remaining: Math.floor(Math.random() * 30) + 30,
+                    limit: 60,
+                    reset: Math.floor(Date.now() / 1000) + 3600
+                };
+                this.updateRateLimitDisplay();
+                
                 return events;
             }
 
             async fetchActivity() {
+                const progressBar = document.getElementById('progress-bar');
+                if (progressBar) {
+                    progressBar.classList.add('loading');
+                }
+                
                 try {
                     let events;
                     
@@ -502,8 +703,43 @@
                         // In demo mode, generate mock events
                         events = this.getMockEvents();
                     } else {
-                        // Try to fetch from GitHub API
-                        const response = await fetch('https://api.github.com/events');
+                        // Build headers for conditional request
+                        const headers = {};
+                        if (this.etag) {
+                            headers['If-None-Match'] = this.etag;
+                        }
+                        if (this.lastModified) {
+                            headers['If-Modified-Since'] = this.lastModified;
+                        }
+                        
+                        // Try to fetch from GitHub API with per_page=100 for maximum data
+                        const response = await fetch('https://api.github.com/events?per_page=100', { headers });
+                        
+                        // Extract rate limit info from headers
+                        const remaining = response.headers.get('X-RateLimit-Remaining');
+                        const limit = response.headers.get('X-RateLimit-Limit');
+                        const reset = response.headers.get('X-RateLimit-Reset');
+                        
+                        if (remaining !== null) {
+                            this.rateLimit.remaining = parseInt(remaining, 10);
+                            this.rateLimit.limit = parseInt(limit, 10);
+                            this.rateLimit.reset = parseInt(reset, 10);
+                            this.updateRateLimitDisplay();
+                        }
+                        
+                        // Store ETag and Last-Modified for conditional requests
+                        const newEtag = response.headers.get('ETag');
+                        const newLastModified = response.headers.get('Last-Modified');
+                        if (newEtag) this.etag = newEtag;
+                        if (newLastModified) this.lastModified = newLastModified;
+                        
+                        // 304 Not Modified - no new data, don't count against rate limit
+                        if (response.status === 304) {
+                            console.log('No new events (304 Not Modified)');
+                            this.startCountdown();
+                            document.getElementById('loading').style.display = 'none';
+                            return;
+                        }
                         
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
@@ -541,6 +777,9 @@
                     errorDiv.textContent = `Error loading data: ${error.message}. Retrying...`;
                     errorDiv.style.display = 'block';
                 }
+                
+                // Reset countdown after fetch completes
+                this.startCountdown();
             }
 
             processEvents(events) {
@@ -575,20 +814,23 @@
                     this.totalEvents++;
                 });
 
-                // Sort new events by date (newest first)
-                newEvents.sort((a, b) => b.createdAt - a.createdAt);
-
-                // Add new events to the front of the list
-                this.events = [...newEvents, ...this.events];
+                // Sort all events by date (newest first) for final list
+                const allEvents = [...newEvents, ...this.events];
+                allEvents.sort((a, b) => b.createdAt - a.createdAt);
+                this.events = allEvents;
 
                 // Keep only the last maxEvents
                 if (this.events.length > this.maxEvents) {
                     this.events = this.events.slice(0, this.maxEvents);
                 }
 
-                // Update latest event for announcement
+                // Update latest event for announcement (use the first new event if any)
                 if (newEvents.length > 0) {
-                    this.latestEvent = newEvents[0];
+                    // Find the newest event by date
+                    const newestEvent = newEvents.reduce((a, b) => 
+                        a.createdAt > b.createdAt ? a : b
+                    );
+                    this.latestEvent = newestEvent;
                 }
 
                 // Store new event IDs for animation
@@ -646,7 +888,10 @@
                 // Clear existing content
                 listContainer.innerHTML = '';
 
-                this.events.forEach((event, index) => {
+                // Sort events by date for display (newest first)
+                const sortedEvents = [...this.events].sort((a, b) => b.createdAt - a.createdAt);
+
+                sortedEvents.forEach((event, index) => {
                     const isNew = this.newEventIds && this.newEventIds.has(event.id);
 
                     const item = document.createElement('div');
@@ -654,7 +899,10 @@
                     item.id = `event-${event.id}`;
 
                     if (isNew) {
-                        item.classList.add('new-event');
+                        item.classList.add('new-event', 'stagger-in');
+                        // Calculate stagger delay - random between 0-2 seconds
+                        const staggerDelay = Math.random() * 2000;
+                        item.style.animationDelay = `${staggerDelay}ms`;
                     }
 
                     item.innerHTML = `

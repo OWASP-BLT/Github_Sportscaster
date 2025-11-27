@@ -41,82 +41,258 @@
             font-size: 1.1em;
         }
 
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        /* Sportscaster Announcement Section */
+        .sportscaster-section {
+            max-width: 900px;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
             gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            border: 3px solid rgba(255, 215, 0, 0.6);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
         }
 
-        .repo-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+        .robot-container {
+            flex-shrink: 0;
+            width: 120px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .robot-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes robot-talk {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.7); }
+        }
+
+        .robot-mouth {
+            animation: robot-talk 0.3s ease-in-out infinite;
+            transform-origin: center;
+        }
+
+        @keyframes robot-blink {
+            0%, 90%, 100% { transform: scaleY(1); }
+            95% { transform: scaleY(0.1); }
+        }
+
+        .robot-eye {
+            animation: robot-blink 3s ease-in-out infinite;
+            transform-origin: center;
+        }
+
+        @keyframes antenna-glow {
+            0%, 100% { fill: #ff4444; filter: drop-shadow(0 0 5px #ff4444); }
+            50% { fill: #ffff00; filter: drop-shadow(0 0 10px #ffff00); }
+        }
+
+        .antenna-light {
+            animation: antenna-glow 1s ease-in-out infinite;
+        }
+
+        .tv-screen {
+            flex-grow: 1;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
             border-radius: 15px;
             padding: 20px;
-            transition: all 0.3s ease;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            border: 4px solid #333;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(100, 100, 255, 0.3);
             position: relative;
             overflow: hidden;
+            min-height: 120px;
         }
 
-        .repo-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .rank {
+        .tv-screen::before {
+            content: '';
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1) 0px,
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        .tv-label {
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            font-size: 0.7em;
+            color: #ff4444;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #ff4444;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: live-pulse 1s ease-in-out infinite;
+        }
+
+        .announcement-content {
+            margin-top: 15px;
+        }
+
+        .announcement-event-type {
+            font-size: 0.9em;
+            color: #ffd700;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .announcement-repo {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #fff;
+            word-break: break-all;
+        }
+
+        .announcement-repo a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .announcement-repo a:hover {
+            text-decoration: underline;
+            color: #ffd700;
+        }
+
+        .announcement-time {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 8px;
+        }
+
+        .no-announcement {
+            color: #888;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Event List Section */
+        .list-container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .event-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px 20px;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .event-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            border-color: rgba(255, 215, 0, 0.5);
+        }
+
+        .event-number {
             background: rgba(255, 255, 255, 0.2);
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 1.2em;
+            font-size: 0.9em;
+            flex-shrink: 0;
         }
 
-        .repo-name {
-            font-size: 1.3em;
+        .event-details {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .event-repo-name {
+            font-size: 1.1em;
             font-weight: bold;
-            margin-bottom: 10px;
             word-break: break-all;
-            padding-right: 50px;
         }
 
-        .repo-name a {
+        .event-repo-name a {
             color: #fff;
             text-decoration: none;
         }
 
-        .repo-name a:hover {
+        .event-repo-name a:hover {
             text-decoration: underline;
-        }
-
-        .activity-count {
-            font-size: 2em;
-            font-weight: bold;
             color: #ffd700;
-            margin: 10px 0;
         }
 
-        .last-activity {
-            font-size: 0.9em;
-            opacity: 0.8;
+        .event-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             margin-top: 5px;
+            flex-wrap: wrap;
         }
 
         .event-type {
             display: inline-block;
             background: rgba(255, 255, 255, 0.2);
-            padding: 4px 8px;
+            padding: 3px 8px;
             border-radius: 5px;
+            font-size: 0.75em;
+        }
+
+        .event-time {
             font-size: 0.8em;
-            margin: 5px 5px 0 0;
+            opacity: 0.7;
+        }
+
+        /* Slide in animation for new events */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .event-item.new-event {
+            animation: slideIn 0.4s ease-out;
+            border-color: rgba(255, 215, 0, 0.8);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
         }
 
         /* Blink animation for new activity */
@@ -134,42 +310,6 @@
 
         .blink {
             animation: blink 0.6s ease-in-out 2;
-        }
-
-        /* Celebration animation for rank improvement */
-        @keyframes celebrate {
-            0%, 100% { 
-                transform: translateY(0) scale(1);
-            }
-            25% { 
-                transform: translateY(-10px) scale(1.05);
-            }
-            75% { 
-                transform: translateY(-5px) scale(1.02);
-            }
-        }
-
-        @keyframes confetti {
-            0% { 
-                transform: translateY(0) rotate(0deg);
-                opacity: 1;
-            }
-            100% { 
-                transform: translateY(-100px) rotate(720deg);
-                opacity: 0;
-            }
-        }
-
-        .celebrate {
-            animation: celebrate 0.6s ease-in-out;
-            border-color: rgba(255, 215, 0, 0.8);
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
-        }
-
-        .trophy {
-            font-size: 2em;
-            position: absolute;
-            animation: confetti 1s ease-out forwards;
         }
 
         .loading {
@@ -201,24 +341,98 @@
             opacity: 0.8;
             font-size: 0.9em;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .sportscaster-section {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .robot-container {
+                width: 80px;
+                height: 100px;
+            }
+
+            .tv-screen {
+                width: 100%;
+            }
+
+            .announcement-repo {
+                font-size: 1.1em;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>⚡ GitHub Activity Sportscaster</h1>
-        <p>Real-time leaderboard of GitHub repository activity</p>
+        <p>Real-time feed of GitHub repository activity</p>
     </div>
 
     <div class="stats">
-        <span id="repo-count">0</span> repositories tracked | 
         <span id="event-count">0</span> events processed | 
         Last update: <span id="last-update">-</span>
+    </div>
+
+    <!-- Sportscaster Announcement Section -->
+    <div class="sportscaster-section" id="sportscaster">
+        <div class="robot-container">
+            <svg class="robot-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+                <!-- Antenna -->
+                <line x1="50" y1="10" x2="50" y2="25" stroke="#888" stroke-width="3"/>
+                <circle class="antenna-light" cx="50" cy="7" r="5" fill="#ff4444"/>
+                
+                <!-- Head -->
+                <rect x="20" y="25" width="60" height="45" rx="10" fill="#4a5568" stroke="#2d3748" stroke-width="2"/>
+                
+                <!-- Eyes -->
+                <g class="robot-eye">
+                    <circle cx="35" cy="45" r="8" fill="#1a202c"/>
+                    <circle cx="35" cy="45" r="5" fill="#48bb78"/>
+                    <circle cx="37" cy="43" r="2" fill="#fff"/>
+                </g>
+                <g class="robot-eye">
+                    <circle cx="65" cy="45" r="8" fill="#1a202c"/>
+                    <circle cx="65" cy="45" r="5" fill="#48bb78"/>
+                    <circle cx="67" cy="43" r="2" fill="#fff"/>
+                </g>
+                
+                <!-- Mouth/Speaker -->
+                <g class="robot-mouth">
+                    <rect x="35" y="58" width="30" height="8" rx="2" fill="#1a202c"/>
+                    <line x1="40" y1="62" x2="45" y2="62" stroke="#48bb78" stroke-width="2"/>
+                    <line x1="48" y1="62" x2="53" y2="62" stroke="#48bb78" stroke-width="2"/>
+                    <line x1="56" y1="62" x2="61" y2="62" stroke="#48bb78" stroke-width="2"/>
+                </g>
+                
+                <!-- Neck -->
+                <rect x="40" y="70" width="20" height="10" fill="#718096"/>
+                
+                <!-- Body -->
+                <rect x="15" y="80" width="70" height="35" rx="8" fill="#4a5568" stroke="#2d3748" stroke-width="2"/>
+                
+                <!-- Chest display -->
+                <rect x="30" y="88" width="40" height="20" rx="3" fill="#1a202c"/>
+                <text x="50" y="102" text-anchor="middle" fill="#48bb78" font-size="8" font-family="monospace">LIVE</text>
+                
+                <!-- Arms -->
+                <rect x="5" y="82" width="10" height="25" rx="5" fill="#718096"/>
+                <rect x="85" y="82" width="10" height="25" rx="5" fill="#718096"/>
+            </svg>
+        </div>
+        <div class="tv-screen">
+            <div class="tv-label"><span class="live-indicator"></span>LIVE</div>
+            <div class="announcement-content" id="announcement">
+                <div class="no-announcement">Waiting for activity...</div>
+            </div>
+        </div>
     </div>
 
     <div class="loading pulse" id="loading">Loading GitHub activity...</div>
     <div class="error" id="error" style="display: none;"></div>
     
-    <div class="grid-container" id="grid"></div>
+    <div class="list-container" id="event-list"></div>
 
     <div class="refresh-info">
         Auto-refreshing every 30 seconds
@@ -227,12 +441,14 @@
     <script>
         class GitHubSportscaster {
             constructor() {
-                this.repos = new Map();
-                this.previousRanks = new Map();
+                this.events = [];
+                this.maxEvents = 50; // Keep last 50 events
                 this.totalEvents = 0;
                 this.updateInterval = 30000; // 30 seconds
                 this.demoMode = false;
                 this.failedAttempts = 0;
+                this.seenEventIds = new Set();
+                this.latestEvent = null;
                 this.init();
             }
 
@@ -242,9 +458,11 @@
             }
 
             generateMockEvent(repoName, eventType) {
+                const id = Math.floor(Math.random() * 1000000000) + Date.now();
                 return {
+                    id: id.toString(),
                     repo: {
-                        id: Math.floor(Math.random() * 1000000) + Date.now(),
+                        id: Math.floor(Math.random() * 1000000),
                         name: repoName
                     },
                     type: eventType,
@@ -267,7 +485,8 @@
                 
                 const events = [];
                 // Generate random events for demo
-                for (let i = 0; i < 30; i++) {
+                const count = Math.floor(Math.random() * 5) + 3; // 3-7 new events each time
+                for (let i = 0; i < count; i++) {
                     const randomRepo = repos[Math.floor(Math.random() * repos.length)];
                     const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
                     events.push(this.generateMockEvent(randomRepo, randomType));
@@ -325,48 +544,54 @@
             }
 
             processEvents(events) {
-                const newActivity = new Set();
+                const newEvents = [];
 
+                // Process events in reverse order so newest are first
                 events.forEach(event => {
-                    const repoName = event.repo.name;
-                    const repoId = event.repo.id;
+                    const eventId = event.id;
                     
-                    if (!this.repos.has(repoId)) {
-                        this.repos.set(repoId, {
-                            id: repoId,
-                            name: repoName,
-                            count: 0,
-                            lastActivity: new Date(event.created_at),
-                            lastEventType: event.type,
-                            url: `https://github.com/${repoName}`
-                        });
+                    // Skip if we've already seen this event
+                    if (this.seenEventIds.has(eventId)) {
+                        return;
                     }
 
-                    const repo = this.repos.get(repoId);
-                    repo.count++;
-                    repo.lastActivity = new Date(event.created_at);
-                    repo.lastEventType = event.type;
-                    newActivity.add(repoId);
+                    this.seenEventIds.add(eventId);
+                    
+                    const processedEvent = {
+                        id: eventId,
+                        repoName: event.repo.name,
+                        repoUrl: `https://github.com/${event.repo.name}`,
+                        eventType: event.type,
+                        createdAt: new Date(event.created_at),
+                        isNew: true
+                    };
+
+                    newEvents.push(processedEvent);
                     this.totalEvents++;
                 });
 
-                // Store new activity for animation
-                this.newActivity = newActivity;
+                // Sort new events by date (newest first)
+                newEvents.sort((a, b) => b.createdAt - a.createdAt);
+
+                // Add new events to the front of the list
+                this.events = [...newEvents, ...this.events];
+
+                // Keep only the last maxEvents
+                if (this.events.length > this.maxEvents) {
+                    this.events = this.events.slice(0, this.maxEvents);
+                }
+
+                // Update latest event for announcement
+                if (newEvents.length > 0) {
+                    this.latestEvent = newEvents[0];
+                }
+
+                // Store new event IDs for animation
+                this.newEventIds = new Set(newEvents.map(e => e.id));
 
                 // Update stats
-                document.getElementById('repo-count').textContent = this.repos.size;
                 document.getElementById('event-count').textContent = this.totalEvents;
                 document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
-            }
-
-            getSortedRepos() {
-                return Array.from(this.repos.values())
-                    .sort((a, b) => {
-                        if (b.count !== a.count) {
-                            return b.count - a.count;
-                        }
-                        return b.lastActivity - a.lastActivity;
-                    });
             }
 
             escapeHtml(text) {
@@ -389,70 +614,65 @@
                 return `${Math.floor(diff / 86400)}d ago`;
             }
 
-            createTrophy() {
-                const trophy = document.createElement('div');
-                trophy.className = 'trophy';
-                trophy.textContent = '🎉';
-                trophy.style.left = Math.random() * 100 + '%';
-                trophy.style.top = '50%';
-                return trophy;
+            updateAnnouncement() {
+                const announcementDiv = document.getElementById('announcement');
+                
+                if (!this.latestEvent) {
+                    announcementDiv.innerHTML = '<div class="no-announcement">Waiting for activity...</div>';
+                    return;
+                }
+
+                const event = this.latestEvent;
+                announcementDiv.innerHTML = `
+                    <div class="announcement-event-type">${this.escapeHtml(this.formatEventType(event.eventType))}</div>
+                    <div class="announcement-repo">
+                        <a href="${this.escapeHtml(event.repoUrl)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(event.repoName)}</a>
+                    </div>
+                    <div class="announcement-time">${this.escapeHtml(this.formatTime(event.createdAt))}</div>
+                `;
             }
 
             render() {
-                const grid = document.getElementById('grid');
-                const sortedRepos = this.getSortedRepos();
+                const listContainer = document.getElementById('event-list');
+                
+                // Update sportscaster announcement
+                this.updateAnnouncement();
                 
                 // Clear existing content
-                grid.innerHTML = '';
+                listContainer.innerHTML = '';
 
-                sortedRepos.forEach((repo, index) => {
-                    const rank = index + 1;
-                    const previousRank = this.previousRanks.get(repo.id);
-                    const hasNewActivity = this.newActivity && this.newActivity.has(repo.id);
-                    const rankImproved = previousRank && previousRank > rank;
+                this.events.forEach((event, index) => {
+                    const isNew = this.newEventIds && this.newEventIds.has(event.id);
 
-                    const card = document.createElement('div');
-                    card.className = 'repo-card';
-                    card.id = `repo-${repo.id}`;
+                    const item = document.createElement('div');
+                    item.className = 'event-item';
+                    item.id = `event-${event.id}`;
 
-                    if (hasNewActivity) {
-                        card.classList.add('blink');
+                    if (isNew) {
+                        item.classList.add('new-event');
                     }
 
-                    if (rankImproved) {
-                        card.classList.add('celebrate');
-                        // Add confetti effect
-                        for (let i = 0; i < 5; i++) {
-                            setTimeout(() => {
-                                const trophy = this.createTrophy();
-                                card.appendChild(trophy);
-                                setTimeout(() => trophy.remove(), 1000);
-                            }, i * 100);
-                        }
-                    }
-
-                    card.innerHTML = `
-                        <div class="rank">#${rank}</div>
-                        <div class="repo-name">
-                            <a href="${this.escapeHtml(repo.url)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(repo.name)}</a>
-                        </div>
-                        <div class="activity-count">${repo.count} events</div>
-                        <div class="last-activity">
-                            ${this.escapeHtml(this.formatTime(repo.lastActivity))}
-                        </div>
-                        <div class="event-type">
-                            ${this.escapeHtml(this.formatEventType(repo.lastEventType))}
+                    item.innerHTML = `
+                        <div class="event-number">${index + 1}</div>
+                        <div class="event-details">
+                            <div class="event-repo-name">
+                                <a href="${this.escapeHtml(event.repoUrl)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(event.repoName)}</a>
+                            </div>
+                            <div class="event-meta">
+                                <span class="event-type">${this.escapeHtml(this.formatEventType(event.eventType))}</span>
+                                <span class="event-time">${this.escapeHtml(this.formatTime(event.createdAt))}</span>
+                            </div>
                         </div>
                     `;
 
-                    grid.appendChild(card);
-
-                    // Update previous ranks
-                    this.previousRanks.set(repo.id, rank);
+                    listContainer.appendChild(item);
                 });
 
-                // Clear new activity markers after render
-                this.newActivity = new Set();
+                // Clear new event markers after render
+                this.newEventIds = new Set();
+                
+                // Mark all events as not new after render
+                this.events.forEach(e => e.isNew = false);
             }
         }
 

@@ -576,7 +576,6 @@
                 this.rateLimit = { remaining: null, limit: null, reset: null };
                 this.countdownInterval = null;
                 this.secondsUntilRefresh = 0;
-                this.pendingEvents = []; // Events to display with stagger
                 this.init();
             }
 
@@ -815,12 +814,6 @@
                     this.totalEvents++;
                 });
 
-                // Shuffle new events for random appearance effect
-                this.shuffleArray(newEvents);
-
-                // Store for staggered display
-                this.pendingEvents = newEvents;
-
                 // Sort all events by date (newest first) for final list
                 const allEvents = [...newEvents, ...this.events];
                 allEvents.sort((a, b) => b.createdAt - a.createdAt);
@@ -846,14 +839,6 @@
                 // Update stats
                 document.getElementById('event-count').textContent = this.totalEvents;
                 document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
-            }
-
-            shuffleArray(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];
-                }
-                return array;
             }
 
             escapeHtml(text) {

@@ -178,6 +178,9 @@ class TextToSpeech {
 
 // AI Commentary Generator
 class AICommentary {
+    // Maximum length for error messages displayed in the UI
+    static MAX_ERROR_DISPLAY_LENGTH = 30;
+    
     constructor() {
         this.enabled = false;
         this.apiUrl = localStorage.getItem('ai_api_url') || '';
@@ -220,10 +223,10 @@ class AICommentary {
         if (!indicator || !text) return;
         
         // Remove all status classes
-        indicator.classList.remove('checking', 'connected', 'error');
-        text.classList.remove('checking', 'connected', 'error');
+        indicator.classList.remove('checking', 'connected', 'error', 'ready');
+        text.classList.remove('checking', 'connected', 'error', 'ready');
         
-        // Add the new status class
+        // Add the new status class (not-configured uses default gray styling)
         if (status !== 'not-configured') {
             indicator.classList.add(status);
             text.classList.add(status);
@@ -294,7 +297,7 @@ class AICommentary {
             } else {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
-                this.updateConnectionStatus('error', `Error: ${errorMessage.substring(0, 30)}`);
+                this.updateConnectionStatus('error', `Error: ${errorMessage.substring(0, AICommentary.MAX_ERROR_DISPLAY_LENGTH)}`);
                 if (testBtn) testBtn.disabled = false;
                 return { success: false, message: errorMessage };
             }
@@ -303,7 +306,7 @@ class AICommentary {
             if (error.name === 'AbortError') {
                 errorMessage = 'Connection timeout';
             } else if (error.message) {
-                errorMessage = error.message.substring(0, 30);
+                errorMessage = error.message.substring(0, AICommentary.MAX_ERROR_DISPLAY_LENGTH);
             }
             this.updateConnectionStatus('error', errorMessage);
             if (testBtn) testBtn.disabled = false;
@@ -317,7 +320,7 @@ class AICommentary {
     initConnectionStatus() {
         if (this.apiUrl && this.apiKey) {
             if (this.isValidApiUrl(this.apiUrl) && this.isValidApiKey(this.apiKey)) {
-                this.updateConnectionStatus('not-configured', 'Ready to test');
+                this.updateConnectionStatus('ready', 'Ready to test');
             } else {
                 this.updateConnectionStatus('error', 'Invalid configuration');
             }

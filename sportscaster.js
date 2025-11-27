@@ -208,6 +208,124 @@ class AICommentary {
         if (this.model) localStorage.setItem('ai_model', this.model);
     }
 
+    /**
+     * Updates the connection status indicator in the UI
+     * @param {string} status - The status to display: 'checking', 'connected', 'error', or 'not-configured'
+     * @param {string} message - The message to display
+     */
+    updateConnectionStatus(status, message) {
+        const indicator = document.getElementById('status-indicator');
+        const text = document.getElementById('status-text');
+        
+        if (!indicator || !text) return;
+        
+        // Remove all status classes
+        indicator.classList.remove('checking', 'connected', 'error');
+        text.classList.remove('checking', 'connected', 'error');
+        
+        // Add the new status class
+        if (status !== 'not-configured') {
+            indicator.classList.add(status);
+            text.classList.add(status);
+        }
+        
+        text.textContent = message;
+    }
+
+    /**
+     * Tests the connection to the OpenAI API
+     * @returns {Promise<{success: boolean, message: string}>}
+     */
+    async testConnection() {
+        const testBtn = document.getElementById('test-connection-btn');
+        
+        // Update UI to show checking status
+        this.updateConnectionStatus('checking', 'Checking connection...');
+        if (testBtn) testBtn.disabled = true;
+        
+        // Get current values from inputs (not stored values)
+        const apiUrlEl = document.getElementById('ai-api-url');
+        const apiKeyEl = document.getElementById('ai-api-key');
+        const modelEl = document.getElementById('ai-model');
+        
+        const apiUrl = apiUrlEl ? apiUrlEl.value.trim() : '';
+        const apiKey = apiKeyEl ? apiKeyEl.value.trim() : '';
+        const model = modelEl ? modelEl.value.trim() : 'gpt-4o-mini';
+        
+        // Validate inputs
+        if (!apiUrl || !apiKey) {
+            this.updateConnectionStatus('not-configured', 'Not configured');
+            if (testBtn) testBtn.disabled = false;
+            return { success: false, message: 'API URL and Key are required' };
+        }
+        
+        if (!this.isValidApiUrl(apiUrl)) {
+            this.updateConnectionStatus('error', 'Invalid API URL');
+            if (testBtn) testBtn.disabled = false;
+            return { success: false, message: 'Invalid API URL format' };
+        }
+        
+        if (!this.isValidApiKey(apiKey)) {
+            this.updateConnectionStatus('error', 'Invalid API Key format');
+            if (testBtn) testBtn.disabled = false;
+            return { success: false, message: 'Invalid API key format' };
+        }
+        
+        try {
+            const response = await this.fetchWithTimeout(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: 'user', content: 'Say "OK" to confirm connection.' }
+                    ],
+                    max_tokens: 5
+                })
+            }, 15000); // 15 second timeout for connection test
+            
+            if (response.ok) {
+                this.updateConnectionStatus('connected', 'Connected ✓');
+                if (testBtn) testBtn.disabled = false;
+                return { success: true, message: 'Connection successful' };
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+                this.updateConnectionStatus('error', `Error: ${errorMessage.substring(0, 30)}`);
+                if (testBtn) testBtn.disabled = false;
+                return { success: false, message: errorMessage };
+            }
+        } catch (error) {
+            let errorMessage = 'Connection failed';
+            if (error.name === 'AbortError') {
+                errorMessage = 'Connection timeout';
+            } else if (error.message) {
+                errorMessage = error.message.substring(0, 30);
+            }
+            this.updateConnectionStatus('error', errorMessage);
+            if (testBtn) testBtn.disabled = false;
+            return { success: false, message: error.message };
+        }
+    }
+
+    /**
+     * Initializes the connection status based on stored configuration
+     */
+    initConnectionStatus() {
+        if (this.apiUrl && this.apiKey) {
+            if (this.isValidApiUrl(this.apiUrl) && this.isValidApiKey(this.apiKey)) {
+                this.updateConnectionStatus('not-configured', 'Ready to test');
+            } else {
+                this.updateConnectionStatus('error', 'Invalid configuration');
+            }
+        } else {
+            this.updateConnectionStatus('not-configured', 'Not configured');
+        }
+    }
+
     getPrompt(event, leaderboard) {
         const topRepos = leaderboard.slice(0, 5).map((r, i) => 
             `${i + 1}. ${r.name} (${r.activityScore} points, ${r.totalEvents} events)`
@@ -623,12 +741,23 @@ class GitHubSportscaster {
             });
         }
         
+        // Test connection button handler
+        const testConnectionBtn = document.getElementById('test-connection-btn');
+        if (testConnectionBtn) {
+            testConnectionBtn.addEventListener('click', () => {
+                this.aiCommentary.testConnection();
+            });
+        }
+        
         const apiUrlEl = document.getElementById('ai-api-url');
         const apiKeyEl = document.getElementById('ai-api-key');
         const modelEl = document.getElementById('ai-model');
         if (apiUrlEl) apiUrlEl.value = this.aiCommentary.apiUrl;
         if (apiKeyEl) apiKeyEl.value = this.aiCommentary.apiKey;
         if (modelEl) modelEl.value = this.aiCommentary.model;
+        
+        // Initialize connection status display
+        this.aiCommentary.initConnectionStatus();
     }
 
     setupChannelFilters() {

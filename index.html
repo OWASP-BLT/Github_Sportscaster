@@ -799,6 +799,73 @@
             border-color: rgba(255, 215, 0, 0.6);
         }
 
+        /* API Key Status Indicator */
+        .api-key-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #888;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.checking {
+            background: #ecc94b;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .status-indicator.connected {
+            background: #48bb78;
+            box-shadow: 0 0 8px rgba(72, 187, 120, 0.6);
+        }
+
+        .status-indicator.error {
+            background: #fc8181;
+            box-shadow: 0 0 8px rgba(252, 129, 129, 0.6);
+        }
+
+        .status-text {
+            color: #ccc;
+        }
+
+        .status-text.connected {
+            color: #48bb78;
+        }
+
+        .status-text.error {
+            color: #fc8181;
+        }
+
+        .status-text.checking {
+            color: #ecc94b;
+        }
+
+        .test-connection-btn {
+            margin-top: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            font-size: 0.85em;
+            padding: 8px 16px;
+        }
+
+        .test-connection-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .test-connection-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         /* AI Commentary Section */
         .ai-commentary {
             background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 107, 107, 0.1));
@@ -1146,6 +1213,11 @@
                 <option value="o3-mini">o3-mini</option>
                 <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
             </select>
+            <div class="api-key-status" id="api-key-status">
+                <span class="status-indicator" id="status-indicator"></span>
+                <span class="status-text" id="status-text">Not configured</span>
+            </div>
+            <button class="config-btn test-connection-btn" id="test-connection-btn" type="button">🔌 Test Connection</button>
         </div>
 
         <div class="config-group">

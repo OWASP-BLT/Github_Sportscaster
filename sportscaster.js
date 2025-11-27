@@ -4,7 +4,21 @@ class SoundEffects {
     constructor() {
         this.audioContext = null;
         this.enabled = true;
+        this.isUnlocked = false;
+        this.isIOS = this.detectIOS();
         this.initAudioContext();
+        this.setupVisibilityHandler();
+    }
+
+    /**
+     * Detects if the current device is running iOS (Safari, DuckDuckGo, etc.)
+     * @returns {boolean} True if running on iOS
+     */
+    detectIOS() {
+        const userAgent = navigator.userAgent || navigator.vendor || '';
+        // Check for iOS devices including iPad on iOS 13+
+        return /iPad|iPhone|iPod/.test(userAgent) || 
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
 
     initAudioContext() {
@@ -16,14 +30,76 @@ class SoundEffects {
         }
     }
 
-    resumeContext() {
-        if (this.audioContext && this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
+    /**
+     * Sets up visibility change handler to re-unlock audio after tab switch on iOS
+     */
+    setupVisibilityHandler() {
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && this.isIOS) {
+                    // Audio may be suspended after tab switch on iOS
+                    // Mark as needing unlock on next user interaction
+                    this.isUnlocked = false;
+                }
+            });
         }
     }
 
+    /**
+     * Resumes the audio context and unlocks it for iOS
+     * Must be called from a user gesture (click/tap) for iOS compatibility
+     * @returns {Promise<void>}
+     */
+    async resumeContext() {
+        if (!this.audioContext) return;
+        
+        if (this.audioContext.state === 'suspended') {
+            try {
+                await this.audioContext.resume();
+            } catch (e) {
+                console.warn('Failed to resume AudioContext:', e);
+            }
+        }
+        
+        // iOS/WebKit workaround: Play a silent buffer to unlock audio
+        if (!this.isUnlocked || this.isIOS) {
+            this.playWarmUpBuffer();
+            this.isUnlocked = true;
+        }
+    }
+
+    /**
+     * Plays a silent buffer to unlock/warm up the audio context on iOS
+     * This trick ensures the audio context stays primed for future sounds
+     */
+    playWarmUpBuffer() {
+        if (!this.audioContext) return;
+        
+        try {
+            // Create a short silent buffer
+            const buffer = this.audioContext.createBuffer(1, 1, 22050);
+            const source = this.audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(this.audioContext.destination);
+            source.start(0);
+        } catch (e) {
+            console.warn('Failed to play warm-up buffer:', e);
+        }
+    }
+
+    /**
+     * Toggles sound effects on/off and unlocks audio on iOS
+     * Must be called from a user gesture (click/tap) for iOS compatibility
+     * @returns {boolean} New enabled state
+     */
     toggle() {
         this.enabled = !this.enabled;
+        
+        // Unlock audio context on user interaction (required for iOS)
+        if (this.enabled) {
+            this.resumeContext();
+        }
+        
         return this.enabled;
     }
 
@@ -754,6 +830,7 @@ class GitHubSportscaster {
     }
 
     async init() {
+        this.setupGlobalAudioUnlock();
         this.setupSoundToggle();
         this.setupTTSToggle();
         this.setupAIToggle();
@@ -765,6 +842,32 @@ class GitHubSportscaster {
         this.startFetchInterval();
     }
 
+    /**
+     * Sets up a global handler to unlock audio on first user interaction
+     * Required for iOS (Safari, DuckDuckGo, etc.) to allow audio playback
+     */
+    setupGlobalAudioUnlock() {
+        const unlockAudio = () => {
+            // Unlock both sound effects and TTS on first interaction
+            this.soundEffects.resumeContext();
+            // Note: TTS is unlocked when toggled, not here
+        };
+        
+        // Listen for various user interaction events
+        const events = ['touchstart', 'touchend', 'mousedown', 'keydown'];
+        const unlockHandler = () => {
+            unlockAudio();
+            // Remove listeners after first unlock
+            events.forEach(event => {
+                document.removeEventListener(event, unlockHandler);
+            });
+        };
+        
+        events.forEach(event => {
+            document.addEventListener(event, unlockHandler, { once: true, passive: true });
+        });
+    }
+
     setupSoundToggle() {
         const toggleBtn = document.getElementById('sound-toggle');
         if (!toggleBtn) return;
@@ -772,7 +875,7 @@ class GitHubSportscaster {
             const enabled = this.soundEffects.toggle();
             toggleBtn.textContent = enabled ? '🔊' : '🔇';
             toggleBtn.classList.toggle('muted', !enabled);
-            this.soundEffects.resumeContext();
+            // resumeContext is now called inside toggle() for iOS compatibility
         });
     }
 

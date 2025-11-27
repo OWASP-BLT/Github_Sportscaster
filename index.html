@@ -197,7 +197,7 @@
             font-size: 1.4em;
             font-weight: bold;
             color: #fff;
-            word-break: break-all;
+            overflow-wrap: break-word;
         }
 
         .announcement-repo a {
@@ -386,7 +386,7 @@
         .event-repo-name {
             font-size: 1em;
             font-weight: bold;
-            word-break: break-all;
+            overflow-wrap: break-word;
         }
 
         .event-repo-name a {
@@ -568,6 +568,89 @@
             animation: pulse 0.5s ease-in-out infinite;
         }
 
+        /* Speed Control Slider */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .speed-control-label {
+            font-size: 0.85em;
+            opacity: 0.8;
+            white-space: nowrap;
+        }
+
+        .speed-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #48bb78;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .speed-slider::-webkit-slider-thumb:hover {
+            background: #38a169;
+        }
+
+        .speed-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #48bb78;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .speed-value {
+            font-size: 0.85em;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .auto-protect {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .auto-protect input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .auto-protect-label {
+            opacity: 0.8;
+            cursor: pointer;
+        }
+
+        .rate-protected {
+            color: #ecc94b;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+
         /* Staggered event animation */
         @keyframes staggerSlideIn {
             from {
@@ -714,6 +797,16 @@
         <div class="progress-bar-container">
             <div class="progress-bar" id="progress-bar" style="width: 100%;"></div>
         </div>
+        <div class="speed-control">
+            <span class="speed-control-label">Refresh Speed:</span>
+            <input type="range" class="speed-slider" id="speed-slider" min="5" max="60" value="10" step="5">
+            <span class="speed-value" id="speed-value">10s</span>
+            <div class="auto-protect">
+                <input type="checkbox" id="auto-protect" checked>
+                <label for="auto-protect" class="auto-protect-label" title="Automatically slow down when rate limit is low">Auto-protect</label>
+            </div>
+            <span class="rate-protected" id="rate-protected" style="display: none;">⚠️ Throttled</span>
+        </div>
     </div>
 
     <div class="loading pulse" id="loading">Loading GitHub activity...</div>
@@ -722,7 +815,7 @@
     <div class="list-container" id="event-list"></div>
 
     <div class="refresh-info">
-        Auto-refreshing every 10 seconds | 🔊 Click sound button to toggle audio
+        Use the slider to control refresh speed | 🔊 Click sound button to toggle audio
     </div>
 
     <script>
@@ -883,12 +976,39 @@
         }
 
         class GitHubSportscaster {
+            // Configuration constants for activity scoring
+            static EVENT_WEIGHTS = {
+                PushEvent: 3,
+                PullRequestEvent: 5,
+                IssuesEvent: 2,
+                ReleaseEvent: 10,
+                ForkEvent: 4,
+                WatchEvent: 1,
+                CreateEvent: 2,
+                DeleteEvent: 1,
+                IssueCommentEvent: 1,
+                CommitCommentEvent: 1
+            };
+
+            // Recency bonus configuration
+            static VERY_RECENT_HOURS = 1;
+            static RECENT_HOURS = 24;
+            static VERY_RECENT_MULTIPLIER = 1.5;
+            static RECENT_MULTIPLIER = 1.2;
+            static CONTRIBUTOR_BONUS_MULTIPLIER = 2;
+
+            // Rate limit protection thresholds
+            static RATE_LIMIT_WARNING = 30;
+            static RATE_LIMIT_DANGER = 10;
+            static THROTTLE_INTERVAL = 30000; // 30 seconds when throttled
+
             constructor() {
                 this.events = [];
                 this.repositories = new Map(); // Track stats per repository
                 this.maxEvents = 50;
                 this.totalEvents = 0;
-                this.updateInterval = 10000; // 10 seconds - optimal for fast updates
+                this.baseUpdateInterval = 10000; // Base 10 seconds
+                this.updateInterval = 10000;
                 this.demoMode = false;
                 this.failedAttempts = 0;
                 this.seenEventIds = new Set();
@@ -899,15 +1019,84 @@
                 this.lastModified = null;
                 this.rateLimit = { remaining: null, limit: null, reset: null };
                 this.countdownInterval = null;
+                this.fetchInterval = null;
                 this.secondsUntilRefresh = 0;
+                this.autoProtect = true;
+                this.isThrottled = false;
                 this.init();
             }
 
             async init() {
                 this.setupSoundToggle();
+                this.setupSpeedControl();
                 this.startCountdown();
                 await this.fetchActivity();
-                setInterval(() => this.fetchActivity(), this.updateInterval);
+                this.startFetchInterval();
+            }
+
+            startFetchInterval() {
+                if (this.fetchInterval) {
+                    clearInterval(this.fetchInterval);
+                }
+                this.fetchInterval = setInterval(() => this.fetchActivity(), this.updateInterval);
+            }
+
+            setupSpeedControl() {
+                const slider = document.getElementById('speed-slider');
+                const valueDisplay = document.getElementById('speed-value');
+                const autoProtectCheckbox = document.getElementById('auto-protect');
+
+                slider.addEventListener('input', () => {
+                    const seconds = parseInt(slider.value, 10);
+                    valueDisplay.textContent = `${seconds}s`;
+                    this.baseUpdateInterval = seconds * 1000;
+                    
+                    // Only update actual interval if not throttled
+                    if (!this.isThrottled) {
+                        this.updateInterval = this.baseUpdateInterval;
+                        this.startFetchInterval();
+                        this.startCountdown();
+                    }
+                });
+
+                autoProtectCheckbox.addEventListener('change', () => {
+                    this.autoProtect = autoProtectCheckbox.checked;
+                    if (!this.autoProtect) {
+                        // Disable throttling when auto-protect is off
+                        this.isThrottled = false;
+                        document.getElementById('rate-protected').style.display = 'none';
+                        this.updateInterval = this.baseUpdateInterval;
+                        this.startFetchInterval();
+                        this.startCountdown();
+                    }
+                });
+            }
+
+            checkRateLimitProtection() {
+                if (!this.autoProtect || this.rateLimit.remaining === null) {
+                    return;
+                }
+
+                const rateProtectedEl = document.getElementById('rate-protected');
+
+                // If rate limit is low, throttle the requests
+                if (this.rateLimit.remaining <= GitHubSportscaster.RATE_LIMIT_DANGER) {
+                    if (!this.isThrottled) {
+                        this.isThrottled = true;
+                        this.updateInterval = GitHubSportscaster.THROTTLE_INTERVAL;
+                        rateProtectedEl.style.display = 'inline';
+                        rateProtectedEl.textContent = '⚠️ Throttled (low rate limit)';
+                        this.startFetchInterval();
+                        this.startCountdown();
+                    }
+                } else if (this.isThrottled && this.rateLimit.remaining > GitHubSportscaster.RATE_LIMIT_WARNING) {
+                    // Resume normal speed when rate limit recovers
+                    this.isThrottled = false;
+                    this.updateInterval = this.baseUpdateInterval;
+                    rateProtectedEl.style.display = 'none';
+                    this.startFetchInterval();
+                    this.startCountdown();
+                }
             }
 
             setupSoundToggle() {
@@ -964,11 +1153,14 @@
                     
                     // Add warning colors based on remaining requests
                     remainingEl.classList.remove('warning', 'danger');
-                    if (this.rateLimit.remaining <= 10) {
+                    if (this.rateLimit.remaining <= GitHubSportscaster.RATE_LIMIT_DANGER) {
                         remainingEl.classList.add('danger');
-                    } else if (this.rateLimit.remaining <= 30) {
+                    } else if (this.rateLimit.remaining <= GitHubSportscaster.RATE_LIMIT_WARNING) {
                         remainingEl.classList.add('warning');
                     }
+
+                    // Check if we need to throttle
+                    this.checkRateLimitProtection();
                 }
                 
                 if (this.rateLimit.reset !== null) {
@@ -1248,35 +1440,22 @@
                 const now = new Date();
                 let score = 0;
 
-                // Weight different event types
-                const eventWeights = {
-                    PushEvent: 3,
-                    PullRequestEvent: 5,
-                    IssuesEvent: 2,
-                    ReleaseEvent: 10,
-                    ForkEvent: 4,
-                    WatchEvent: 1,
-                    CreateEvent: 2,
-                    DeleteEvent: 1,
-                    IssueCommentEvent: 1,
-                    CommitCommentEvent: 1
-                };
-
+                // Use class-level event weights for maintainability
                 Object.entries(repo.eventCounts).forEach(([type, count]) => {
-                    const weight = eventWeights[type] || 1;
+                    const weight = GitHubSportscaster.EVENT_WEIGHTS[type] || 1;
                     score += count * weight;
                 });
 
-                // Bonus for recent activity
+                // Bonus for recent activity using named constants
                 const hoursSinceLastActivity = (now - repo.lastActivity) / (1000 * 60 * 60);
-                if (hoursSinceLastActivity < 1) {
-                    score *= 1.5;
-                } else if (hoursSinceLastActivity < 24) {
-                    score *= 1.2;
+                if (hoursSinceLastActivity < GitHubSportscaster.VERY_RECENT_HOURS) {
+                    score *= GitHubSportscaster.VERY_RECENT_MULTIPLIER;
+                } else if (hoursSinceLastActivity < GitHubSportscaster.RECENT_HOURS) {
+                    score *= GitHubSportscaster.RECENT_MULTIPLIER;
                 }
 
                 // Bonus for contributor diversity
-                score += repo.contributors.size * 2;
+                score += repo.contributors.size * GitHubSportscaster.CONTRIBUTOR_BONUS_MULTIPLIER;
 
                 repo.activityScore = Math.round(score);
             }
@@ -1408,8 +1587,9 @@
                 // Sort events by date for display (newest first)
                 const sortedEvents = [...this.events].sort((a, b) => b.createdAt - a.createdAt);
 
-                // Calculate max score for activity bar scaling
-                const maxScore = Math.max(...Array.from(this.repositories.values()).map(r => r.activityScore), 1);
+                // Calculate max score for activity bar scaling - handle empty repositories case
+                const repoScores = Array.from(this.repositories.values()).map(r => r.activityScore);
+                const highestActivityScore = repoScores.length > 0 ? Math.max(...repoScores) : 1;
 
                 sortedEvents.forEach((event, index) => {
                     const isNew = this.newEventIds && this.newEventIds.has(event.id);
@@ -1418,7 +1598,8 @@
 
                     const item = document.createElement('div');
                     item.className = 'event-item';
-                    item.id = `event-${event.id}`;
+                    // Sanitize event ID for valid HTML ID attribute
+                    item.id = `event-${String(event.id).replace(/[^a-zA-Z0-9-_]/g, '-')}`;
 
                     if (isNew) {
                         item.classList.add('new-event', 'stagger-in');
@@ -1428,8 +1609,8 @@
 
                     // Build compact stats HTML for this repo
                     let statsHtml = '';
-                    if (repo) {
-                        const activityPercent = Math.round((repo.activityScore / maxScore) * 100);
+                    if (repo && highestActivityScore > 0) {
+                        const activityPercent = Math.round((repo.activityScore / highestActivityScore) * 100);
                         const trending = this.getTrendingIndicator(repo.name, index + 1);
                         
                         // Build mini event type tags (top 3)

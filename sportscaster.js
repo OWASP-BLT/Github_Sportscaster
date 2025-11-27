@@ -126,12 +126,16 @@ class SoundEffects {
 
 // Text-to-Speech Manager
 class TextToSpeech {
+    // Delay in ms after cancel before speaking (Chrome bug workaround)
+    static SPEAK_DELAY_MS = 50;
+
     constructor() {
         this.enabled = false;
         this.synth = window.speechSynthesis;
         this.voice = null;
         this.rate = 1.1;
         this.pitch = 1.0;
+        this.voicesLoaded = false;
         this.initVoice();
     }
 
@@ -143,9 +147,12 @@ class TextToSpeech {
         
         const loadVoices = () => {
             const voices = this.synth.getVoices();
-            this.voice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) ||
-                         voices.find(v => v.lang.startsWith('en')) ||
-                         voices[0];
+            if (voices.length > 0) {
+                this.voice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) ||
+                             voices.find(v => v.lang.startsWith('en')) ||
+                             voices[0];
+                this.voicesLoaded = true;
+            }
         };
         
         loadVoices();
@@ -162,9 +169,20 @@ class TextToSpeech {
         return this.enabled;
     }
 
+    /**
+     * Resumes speech synthesis if it's in a paused state
+     * This fixes issues in some browsers where synthesis gets stuck
+     */
+    resumeSynthesis() {
+        if (this.synth && this.synth.paused) {
+            this.synth.resume();
+        }
+    }
+
     speak(text) {
         if (!this.enabled || !this.synth || !text) return;
         
+        // Cancel any pending speech
         this.synth.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text);
@@ -172,7 +190,14 @@ class TextToSpeech {
         utterance.rate = this.rate;
         utterance.pitch = this.pitch;
         
-        this.synth.speak(utterance);
+        // Chrome bug workaround: synthesis can get stuck if not resumed
+        // Adding a small delay after cancel helps ensure the queue is clear
+        setTimeout(() => {
+            if (this.synth) {
+                this.resumeSynthesis();
+                this.synth.speak(utterance);
+            }
+        }, TextToSpeech.SPEAK_DELAY_MS);
     }
 }
 
